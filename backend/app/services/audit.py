@@ -11,7 +11,7 @@ Never bypass this module by writing a raw query against AuditLog elsewhere.
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.models import AuditLog, RoleEnum
+from app.models.models import AuditLog, User, Customer, Milkman, RoleEnum
 
 
 async def record_audit(
@@ -66,3 +66,54 @@ async def get_audit_logs(
 
     result = await db.execute(stmt)
     return result.scalars().all()
+
+
+async def enrich_audit_logs(db: AsyncSession, logs: list[AuditLog]) -> list[dict]:
+    """
+    Adds human-readable names to raw audit rows: which customer, which
+    milkman, and who actually performed the action. Batches the lookups
+    so this stays cheap even for a long log list.
+    """
+    customer_ids = {log.customer_id for log in logs if log.customer_id}
+    milkman_ids = {log.milkman_id for log in logs if log.milkman_id}
+    user_ids = {log.user_id for log in logs if log.user_id}
+
+    customers = {}
+    if customer_ids:
+        result = await db.execute(select(Customer).where(Customer.id.in_(customer_ids)))
+        customers = {c.id: c.name for c in result.scalars().all()}
+
+    milkmen = {}
+    if milkman_ids:
+        result = await db.execute(select(Milkman).where(Milkman.id.in_(milkman_ids)))
+        milkmen = {m.id: m.name for m in result.scalars().all()}
+
+    users = {}
+    if user_ids:
+        result = await db.execute(select(User).where(User.id.in_(user_ids)))
+        users = {u.id: u for u in result.scalars().all()}
+
+    out = []
+    for log in logs:
+        actor = users.get(log.user_id)
+        if actor and actor.role == RoleEnum.ADMIN:
+            performed_by = actor.username or "Admin"
+        elif actor and log.milkman_id and log.milkman_id in milkmen:
+            performed_by = milkmen[log.milkman_id]
+        else:
+            performed_by = "Unknown"
+
+        out.append({
+            "id": log.id,
+            "action": log.action,
+            "entity_type": log.entity_type,
+            "entity_id": log.entity_id,
+            "customer_id": log.customer_id,
+            "customer_name": customers.get(log.customer_id),
+            "milkman_id": log.milkman_id,
+            "milkman_name": milkmen.get(log.milkman_id),
+            "performed_by": performed_by,
+            "metadata_json": log.metadata_json,
+            "created_at": log.created_at.isoformat(),
+        })
+    return out

@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_theme.dart';
-import '../auth/auth_controller.dart';
+import '../../core/logout_fab.dart';
 import 'admin_milkmen_tab.dart';
 import 'admin_customers_tab.dart';
 import 'admin_logs_tab.dart';
 
-class AdminHomeShell extends ConsumerStatefulWidget {
+class AdminHomeShell extends StatefulWidget {
   const AdminHomeShell({super.key});
 
   @override
-  ConsumerState<AdminHomeShell> createState() => _AdminHomeShellState();
+  State<AdminHomeShell> createState() => _AdminHomeShellState();
 }
 
-class _AdminHomeShellState extends ConsumerState<AdminHomeShell> {
+class _AdminHomeShellState extends State<AdminHomeShell> {
   int _index = 0;
   final _milkmenKey = GlobalKey<AdminMilkmenTabState>();
   final _customersKey = GlobalKey<AdminCustomersTabState>();
@@ -28,19 +27,10 @@ class _AdminHomeShellState extends ConsumerState<AdminHomeShell> {
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              ref.read(authControllerProvider.notifier).logout();
-              Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Admin')),
       body: SafeArea(child: pages[_index]),
+      floatingActionButton: const LogoutFab(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
         onTap: (i) {

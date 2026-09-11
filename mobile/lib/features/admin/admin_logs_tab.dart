@@ -10,6 +10,14 @@ const _monthNames = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+const Map<String, String> _actionLabels = {
+  'MILK_ENTRY_CREATED': 'Entry added',
+  'MILK_ENTRY_UPDATED': 'Entry edited',
+  'MILK_ENTRY_DELETED': 'Entry removed',
+  'PRICE_CHANGED': 'Milk rate changed',
+  'CUSTOMER_CREATED': 'Customer added',
+};
+
 class AdminLogsTab extends StatefulWidget {
   const AdminLogsTab({super.key});
 
@@ -21,6 +29,7 @@ class AdminLogsTabState extends State<AdminLogsTab> {
   List<dynamic> _logs = [];
   bool _loading = true;
   DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  final Set<String> _expanded = {};
 
   @override
   void initState() {
@@ -93,8 +102,41 @@ class AdminLogsTabState extends State<AdminLogsTab> {
     reload();
   }
 
+  String _describeLog(Map<String, dynamic> log) {
+    final action = log['action'] as String;
+    final meta = log['metadata_json'] as Map?;
+    final label = _actionLabels[action] ?? action;
+    final customerName = log['customer_name'] as String?;
+
+    if (action == 'MILK_ENTRY_CREATED' && meta?['new'] != null) {
+      return '$label: ${meta!['new']['quantity']} L${customerName != null ? ' \u2022 $customerName' : ''}';
+    }
+    if (action == 'MILK_ENTRY_UPDATED' && meta?['old'] != null && meta?['new'] != null) {
+      return '$label: ${meta!['old']['quantity']}L \u2192 ${meta['new']['quantity']}L${customerName != null ? ' \u2022 $customerName' : ''}';
+    }
+    if (action == 'PRICE_CHANGED' && meta?['new'] != null) {
+      return '$label: \u20b9${meta!['new']['price']}/L';
+    }
+    if (action == 'CUSTOMER_CREATED' && customerName != null) {
+      return '$label: $customerName';
+    }
+    return label;
+  }
+
+  Map<String, List<dynamic>> _groupByMilkman(List<dynamic> logs) {
+    final grouped = <String, List<dynamic>>{};
+    for (final log in logs) {
+      final key = log['milkman_name'] ?? log['performed_by'] ?? 'Unknown';
+      grouped.putIfAbsent(key, () => []).add(log);
+    }
+    return grouped;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final grouped = _groupByMilkman(_logs);
+    final milkmanNames = grouped.keys.toList()..sort();
+
     return RefreshIndicator(
       onRefresh: reload,
       child: ListView(
@@ -151,14 +193,37 @@ class AdminLogsTabState extends State<AdminLogsTab> {
               child: Center(child: Text('No logs for this month.', style: TextStyle(color: AppTheme.textSecondary))),
             )
           else
-            ..._logs.map((log) {
-              final created = DateTime.parse(log['created_at']).toLocal();
+            ...milkmanNames.map((milkmanName) {
+              final logs = grouped[milkmanName]!;
+              final isExpanded = _expanded.contains(milkmanName);
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  title: Text(log['action'] ?? ''),
-                  subtitle: Text('${longDate(created)} \u2022 ${created.toString().substring(11, 16)}'),
-                  dense: true,
+                clipBehavior: Clip.antiAlias,
+                child: Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    initiallyExpanded: isExpanded,
+                    onExpansionChanged: (open) {
+                      setState(() {
+                        if (open) {
+                          _expanded.add(milkmanName);
+                        } else {
+                          _expanded.remove(milkmanName);
+                        }
+                      });
+                    },
+                    leading: const Icon(Icons.folder_outlined, color: AppTheme.accent),
+                    title: Text(milkmanName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('${logs.length} log entr${logs.length == 1 ? 'y' : 'ies'}'),
+                    children: logs.map<Widget>((log) {
+                      final created = DateTime.parse(log['created_at']).toLocal();
+                      return ListTile(
+                        dense: true,
+                        title: Text(_describeLog(log)),
+                        subtitle: Text('${longDate(created)} \u2022 ${created.toString().substring(11, 16)} \u2022 by ${log['performed_by']}'),
+                      );
+                    }).toList(),
+                  ),
                 ),
               );
             }),

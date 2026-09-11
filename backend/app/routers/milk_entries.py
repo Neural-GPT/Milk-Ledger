@@ -9,6 +9,7 @@ from app.core.deps import get_current_milkman, get_current_customer
 from app.models.models import MilkEntry, MilkPrice, Customer, Notification, Milkman
 from app.schemas.milk_entry import MilkEntryCreate, MilkEntryUpdate, MilkEntryOut
 from app.services.audit import record_audit
+from app.services.sms import send_sms
 
 router = APIRouter(prefix="/milk-entries", tags=["milk-entries"])
 
@@ -95,6 +96,10 @@ async def create_milk_entry(
 
     await db.commit()
     await db.refresh(entry)
+
+    if body.delivery_date == date.today():
+        await send_sms(customer.phone_number, _notification_message(body.delivery_date, body.quantity_litres))
+
     return entry
 
 
@@ -143,6 +148,10 @@ async def update_milk_entry(
 
     await db.commit()
     await db.refresh(entry)
+
+    if entry.delivery_date == date.today():
+        await send_sms(customer.phone_number, _notification_message(entry.delivery_date, float(entry.quantity_litres)))
+
     return entry
 
 

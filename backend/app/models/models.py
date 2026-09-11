@@ -138,3 +138,18 @@ class AuditLog(Base):
     milkman_id: Mapped[str | None] = mapped_column(ForeignKey("milkmen.id"), nullable=True, index=True)
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # {"old": ..., "new": ...}
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+
+
+class Feedback(Base):
+    """
+    Star rating + optional comment, from either a milkman or a customer.
+    Submitting one always notifies every admin account.
+    """
+    __tablename__ = "feedback"
+
+    id: Mapped[str] = mapped_column(UUIDStr, primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    role: Mapped[RoleEnum] = mapped_column(Enum(RoleEnum))
+    rating: Mapped[int] = mapped_column()  # 1-5
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)

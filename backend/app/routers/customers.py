@@ -132,6 +132,18 @@ async def recent_customers(
     return out[:10]
 
 
-@router.get("/me", response_model=CustomerOut)
-async def my_profile(customer: Customer = Depends(get_current_customer)):
-    return customer
+@router.get("/me")
+async def my_profile(
+    customer: Customer = Depends(get_current_customer),
+    db: AsyncSession = Depends(get_db),
+):
+    milkman = await db.get(Milkman, customer.milkman_id)
+    return {
+        "id": customer.id,
+        "name": customer.name,
+        "phone_number": customer.phone_number,
+        "address": customer.address,
+        "is_active": customer.is_active,
+        "milkman_name": milkman.name if milkman else None,
+        "milkman_business_name": milkman.business_name if milkman else None,
+    }

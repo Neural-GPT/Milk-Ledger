@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../../core/logout_fab.dart';
 import 'customer_home_tab.dart';
 import 'customer_calendar_tab.dart';
 import 'customer_log_tab.dart';
@@ -40,8 +41,10 @@ class _CustomerHomeShellState extends State<CustomerHomeShell> with WidgetsBindi
     try {
       final res = await ApiClient.instance.dio.get('/notifications/me');
       final unread = (res.data as List).where((n) => n['is_read'] == false).toList();
-      for (final n in unread) {
-        if (!mounted) return;
+      // Only pop up for the newest one (most recent first from the API) so a
+      // customer catching up after a while isn't hit with a stack of dialogs.
+      if (unread.isNotEmpty && mounted) {
+        final n = unread.first;
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -49,18 +52,14 @@ class _CustomerHomeShellState extends State<CustomerHomeShell> with WidgetsBindi
             title: Text(n['title'] ?? ''),
             content: Text(n['message'] ?? '', style: const TextStyle(fontSize: 16)),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
+              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
             ],
           ),
         );
-        await ApiClient.instance.dio.post('/notifications/${n['id']}/read');
-      }
-      if (unread.isNotEmpty) {
+        // Deliberately NOT marking as read here - the pill on the Home
+        // tab shows the same message and stays until the person dismisses
+        // it there, so the popup is just an immediate heads-up.
         _homeKey.currentState?.reload();
-        _calendarKey.currentState?.reload();
       }
     } catch (_) {
       // Silent - notifications are a nice-to-have, not core flow.
@@ -77,6 +76,8 @@ class _CustomerHomeShellState extends State<CustomerHomeShell> with WidgetsBindi
 
     return Scaffold(
       body: SafeArea(child: pages[_index]),
+      floatingActionButton: const LogoutFab(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
         onTap: (i) {

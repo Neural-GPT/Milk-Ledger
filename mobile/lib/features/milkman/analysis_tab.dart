@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import 'customer_calendar_popup.dart';
 
 const _monthNames = [
   '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -101,6 +102,7 @@ class AnalysisTabState extends State<AnalysisTab> {
                   ),
                   title: Text(c['name'] ?? ''),
                   trailing: Text('${c['total_litres']} L', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () => showCustomerCalendarPopup(context, c['id'], c['name'] ?? ''),
                 ),
               );
             }),

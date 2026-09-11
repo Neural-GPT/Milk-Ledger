@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
 import '../../core/date_format.dart';
+import '../../core/weekly_feedback_prompt.dart';
+import '../../shared/widgets/feedback_dialog.dart';
 import '../auth/auth_controller.dart';
 import 'add_customer_screen.dart';
 
@@ -28,28 +30,36 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   DateTime _selectedDate = DateTime.now();
   bool _loading = true;
   bool _saving = false;
+  bool _offline = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
     _loadAll();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) WeeklyFeedbackPrompt.maybeShow(context);
+    });
   }
 
   Future<void> _loadAll() async {
     setState(() => _loading = true);
     try {
       final results = await Future.wait([
-        ApiClient.instance.dio.get('/dashboard/profile'),
-        ApiClient.instance.dio.get('/dashboard/summary'),
-        ApiClient.instance.dio.get('/customers/recent'),
+        ApiClient.instance.cachedGet('/dashboard/profile'),
+        ApiClient.instance.cachedGet('/dashboard/summary'),
+        ApiClient.instance.cachedGet('/customers/recent'),
       ]);
       setState(() {
         _profile = results[0].data;
         _summary = results[1].data;
         _recentCustomers = results[2].data;
         _currentPrice = (_summary?['current_price_per_litre'] as num?)?.toDouble();
+        _offline = results.any((r) => r.fromCache);
       });
+    } catch (_) {
+      // No network AND no cache yet - nothing more we can show.
+      if (mounted) setState(() => _offline = true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -183,14 +193,26 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
             children: [
               Text(businessName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               IconButton(
-                icon: const Icon(Icons.logout, color: AppTheme.textSecondary),
-                onPressed: () {
-                  ref.read(authControllerProvider.notifier).logout();
-                  Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-                },
+                icon: const Icon(Icons.feedback_outlined, color: AppTheme.textSecondary),
+                tooltip: 'Give feedback',
+                onPressed: () => showFeedbackDialog(context),
               ),
             ],
           ),
+          if (_offline) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: AppTheme.warning.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+              child: const Row(
+                children: [
+                  Icon(Icons.wifi_off, size: 16, color: AppTheme.warning),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Offline - showing saved data', style: TextStyle(fontSize: 12, color: AppTheme.warning))),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           const Text('Quick Summary', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),

@@ -108,18 +108,21 @@ class MilkmanLogTabState extends State<MilkmanLogTab> {
   String _describeLog(Map<String, dynamic> log) {
     final action = log['action'] as String;
     final meta = log['metadata_json'] as Map?;
-    final label = _actionLabels[action] ?? action;
+    final customerName = log['customer_name'] as String?;
 
     if (action == 'MILK_ENTRY_CREATED' && meta?['new'] != null) {
-      return '$label: ${meta!['new']['quantity']} L';
+      final qty = meta!['new']['quantity'];
+      return '${qty}L${customerName != null ? '    $customerName' : ''}';
     }
     if (action == 'MILK_ENTRY_UPDATED' && meta?['old'] != null && meta?['new'] != null) {
-      return '$label: ${meta!['old']['quantity']} L \u2192 ${meta['new']['quantity']} L';
+      final oldQty = meta!['old']['quantity'];
+      final newQty = meta['new']['quantity'];
+      return '$oldQty L \u2192 ${newQty}L${customerName != null ? '    $customerName' : ''}';
     }
     if (action == 'PRICE_CHANGED' && meta?['new'] != null) {
-      return '$label: \u20b9${meta!['new']['price']}/L';
+      return 'Milk rate changed: \u20b9${meta!['new']['price']}/L';
     }
-    return label;
+    return _actionLabels[action] ?? action;
   }
 
   @override

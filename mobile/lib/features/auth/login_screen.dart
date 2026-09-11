@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_theme.dart';
 import 'auth_controller.dart';
 
-enum _LoginMode { milkman, customer, admin }
+enum _LoginMode { milkman, customer }
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -14,11 +14,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   _LoginMode _mode = _LoginMode.milkman;
-  final _milkmanPhoneController = TextEditingController();
-  final _milkmanNameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _adminUsernameController = TextEditingController();
-  final _adminPasswordController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _phoneOrPasswordController = TextEditingController();
+  final _customerPhoneController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -48,97 +46,87 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-              const Icon(Icons.local_drink_rounded, size: 56, color: AppTheme.accent),
-              const SizedBox(height: 12),
-              const Text(
-                'Milk Delivery',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-              ),
-              const SizedBox(height: 32),
-
-              // Milkman / Customer toggle
-              Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceLight,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  children: [
-                    Expanded(child: _modeTab('Milkman', _LoginMode.milkman)),
-                    Expanded(child: _modeTab('Customer', _LoginMode.customer)),
-                    Expanded(child: _modeTab('Admin', _LoginMode.admin)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              if (_mode == _LoginMode.milkman) ...[
-                TextField(
-                  controller: _milkmanPhoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(hintText: 'Phone number', prefixIcon: Icon(Icons.phone_outlined)),
-                ),
+                const Icon(Icons.local_drink_rounded, size: 56, color: AppTheme.accent),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: _milkmanNameController,
-                  decoration: const InputDecoration(hintText: 'Name', prefixIcon: Icon(Icons.person_outline)),
-                ),
-                const SizedBox(height: 8),
                 const Text(
-                  'Use the name and number the admin registered you with.',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  'Milk Ledger',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
                 ),
-              ] else if (_mode == _LoginMode.customer) ...[
-                TextField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(hintText: 'Phone number', prefixIcon: Icon(Icons.phone_outlined)),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Your number gets linked to this device on first login.',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                ),
-              ] else ...[
-                TextField(
-                  controller: _adminUsernameController,
-                  decoration: const InputDecoration(hintText: 'Username', prefixIcon: Icon(Icons.person_outline)),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _adminPasswordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(hintText: 'Password', prefixIcon: Icon(Icons.lock_outline)),
-                ),
-              ],
+                const SizedBox(height: 32),
 
-              const SizedBox(height: 20),
-              if (authState.error != null) ...[
-                Text(authState.error!, style: const TextStyle(color: Colors.redAccent)),
-                const SizedBox(height: 12),
-              ],
+                // Milkman/Admin share one form now; Customer is separate (phone-only, no password).
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  child: Row(
+                    children: [
+                      Expanded(child: _modeTab('Milkman / Admin', _LoginMode.milkman)),
+                      Expanded(child: _modeTab('Customer', _LoginMode.customer)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
 
-              ElevatedButton(
-                onPressed: loading
-                    ? null
-                    : () {
-                        if (_mode == _LoginMode.milkman) {
-                          controller.milkmanLogin(_milkmanPhoneController.text.trim(), _milkmanNameController.text.trim());
-                        } else if (_mode == _LoginMode.customer) {
-                          controller.customerLogin(_phoneController.text.trim());
-                        } else {
-                          controller.adminLogin(_adminUsernameController.text.trim(), _adminPasswordController.text.trim());
-                        }
-                      },
-                child: loading
-                    ? const SizedBox(
-                        height: 20, width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                      )
-                    : const Text('LOG IN'),
-              ),
+                if (_mode == _LoginMode.milkman) ...[
+                  TextField(
+                    controller: _usernameController,
+                    decoration: const InputDecoration(hintText: 'Username', prefixIcon: Icon(Icons.person_outline)),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _phoneOrPasswordController,
+                    keyboardType: TextInputType.number,
+                    obscureText: true,
+                    decoration: const InputDecoration(hintText: 'Phone number', prefixIcon: Icon(Icons.phone_outlined)),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Milkman: your registered name + phone number. Admin: your username + numeric password.',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                ] else ...[
+                  TextField(
+                    controller: _customerPhoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(hintText: 'Phone number', prefixIcon: Icon(Icons.phone_outlined)),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Your number gets linked to this device on first login.',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                ],
+
+                const SizedBox(height: 20),
+                if (authState.error != null) ...[
+                  Text(authState.error!, style: const TextStyle(color: Colors.redAccent)),
+                  const SizedBox(height: 12),
+                ],
+
+                ElevatedButton(
+                  onPressed: loading
+                      ? null
+                      : () {
+                          if (_mode == _LoginMode.milkman) {
+                            controller.unifiedMilkmanOrAdminLogin(
+                              _usernameController.text.trim(),
+                              _phoneOrPasswordController.text.trim(),
+                            );
+                          } else {
+                            controller.customerLogin(_customerPhoneController.text.trim());
+                          }
+                        },
+                  child: loading
+                      ? const SizedBox(
+                          height: 20, width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                        )
+                      : const Text('LOG IN'),
+                ),
               ],
             ),
           ),

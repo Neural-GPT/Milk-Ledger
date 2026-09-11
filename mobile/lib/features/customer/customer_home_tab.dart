@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
 import '../../core/date_format.dart';
+import '../../core/weekly_feedback_prompt.dart';
 import '../../shared/models/milk_entry.dart';
-import '../auth/auth_controller.dart';
+import '../../shared/widgets/feedback_dialog.dart';
 
 class CustomerHomeTab extends ConsumerStatefulWidget {
   const CustomerHomeTab({super.key});
@@ -15,21 +16,52 @@ class CustomerHomeTab extends ConsumerStatefulWidget {
 
 class CustomerHomeTabState extends ConsumerState<CustomerHomeTab> {
   List<MilkEntry> _entries = [];
+  String? _milkmanName;
+  Map<String, dynamic>? _latestUnreadNotification;
   bool _loading = true;
+  bool _offline = false;
 
   @override
   void initState() {
     super.initState();
     reload();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) WeeklyFeedbackPrompt.maybeShow(context);
+    });
   }
 
   Future<void> reload() async {
     setState(() => _loading = true);
-    final res = await ApiClient.instance.dio.get('/milk-entries/me');
-    setState(() {
-      _entries = (res.data as List).map((e) => MilkEntry.fromJson(e)).toList();
-      _loading = false;
-    });
+    try {
+      final results = await Future.wait([
+        ApiClient.instance.cachedGet('/milk-entries/me'),
+        ApiClient.instance.cachedGet('/customers/me'),
+        ApiClient.instance.cachedGet('/notifications/me'),
+      ]);
+      final notifications = results[2].data as List;
+      final unread = notifications.where((n) => n['is_read'] == false).toList();
+
+      setState(() {
+        _entries = (results[0].data as List).map((e) => MilkEntry.fromJson(e)).toList();
+        _milkmanName = results[1].data['milkman_business_name'] ?? results[1].data['milkman_name'];
+        _latestUnreadNotification = unread.isNotEmpty ? unread.first : null;
+        _offline = results.any((r) => r.fromCache);
+      });
+    } catch (_) {
+      // No network AND no cache yet - nothing more we can show.
+      if (mounted) setState(() => _offline = true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _dismissPill() async {
+    final notif = _latestUnreadNotification;
+    if (notif == null) return;
+    setState(() => _latestUnreadNotification = null);
+    if (!_offline) {
+      await ApiClient.instance.dio.post('/notifications/${notif['id']}/read');
+    }
   }
 
   @override
@@ -51,16 +83,42 @@ class CustomerHomeTabState extends ConsumerState<CustomerHomeTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('My Milk', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('My Milk', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  if (_milkmanName != null)
+                    Text('via $_milkmanName', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                ],
+              ),
               IconButton(
-                icon: const Icon(Icons.logout, color: AppTheme.textSecondary),
-                onPressed: () {
-                  ref.read(authControllerProvider.notifier).logout();
-                  Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-                },
+                icon: const Icon(Icons.feedback_outlined, color: AppTheme.textSecondary),
+                tooltip: 'Give feedback',
+                onPressed: () => showFeedbackDialog(context),
               ),
             ],
           ),
+          if (_latestUnreadNotification != null) ...[
+            const SizedBox(height: 12),
+            _NotificationPill(
+              message: _latestUnreadNotification!['message'] ?? '',
+              onDismiss: _dismissPill,
+            ),
+          ],
+          if (_offline) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: AppTheme.warning.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+              child: const Row(
+                children: [
+                  Icon(Icons.wifi_off, size: 16, color: AppTheme.warning),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Offline - showing saved data', style: TextStyle(fontSize: 12, color: AppTheme.warning))),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Row(
             children: [
@@ -120,6 +178,35 @@ class CustomerHomeTabState extends ConsumerState<CustomerHomeTab> {
                     trailing: Text('\u20b9${e.totalAmount}', style: const TextStyle(fontWeight: FontWeight.w600)),
                   ),
                 )),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationPill extends StatelessWidget {
+  final String message;
+  final VoidCallback onDismiss;
+  const _NotificationPill({required this.message, required this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.accent.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.local_drink_rounded, color: AppTheme.accent, size: 18),
+          const SizedBox(width: 10),
+          Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.w600))),
+          GestureDetector(
+            onTap: onDismiss,
+            child: const Icon(Icons.close, size: 16, color: AppTheme.textSecondary),
+          ),
         ],
       ),
     );

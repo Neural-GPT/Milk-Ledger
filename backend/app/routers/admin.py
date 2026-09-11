@@ -12,6 +12,8 @@ from app.core.database import get_db
 from app.core.deps import require_role
 from app.models.models import User, Milkman, Customer, AuditLog, RoleEnum
 
+from app.services.audit import enrich_audit_logs
+
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
@@ -153,7 +155,7 @@ class AuditLogOut(BaseModel):
         from_attributes = True
 
 
-@router.get("/audit-logs", response_model=list[AuditLogOut], dependencies=[Depends(require_role(RoleEnum.ADMIN))])
+@router.get("/audit-logs", dependencies=[Depends(require_role(RoleEnum.ADMIN))])
 async def admin_list_audit_logs(
     year: int | None = None,
     month: int | None = None,
@@ -165,7 +167,8 @@ async def admin_list_audit_logs(
     if month is not None:
         stmt = stmt.where(extract("month", AuditLog.created_at) == month)
     result = await db.execute(stmt.limit(5000))
-    return result.scalars().all()
+    logs = result.scalars().all()
+    return await enrich_audit_logs(db, logs)
 
 
 @router.get("/audit-logs/export", dependencies=[Depends(require_role(RoleEnum.ADMIN))])
@@ -178,15 +181,19 @@ async def admin_export_audit_logs(year: int, month: int, db: AsyncSession = Depe
     )
     result = await db.execute(stmt)
     logs = result.scalars().all()
+    enriched = await enrich_audit_logs(db, logs)
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["created_at", "action", "entity_type", "entity_id", "user_id", "customer_id", "milkman_id", "details"])
-    for log in logs:
+    writer.writerow([
+        "created_at", "action", "performed_by", "milkman_name", "customer_name",
+        "entity_type", "entity_id", "details",
+    ])
+    for log in enriched:
         writer.writerow([
-            log.created_at.isoformat(), log.action, log.entity_type, log.entity_id,
-            log.user_id, log.customer_id or "", log.milkman_id or "",
-            str(log.metadata_json or ""),
+            log["created_at"], log["action"], log["performed_by"],
+            log["milkman_name"] or "", log["customer_name"] or "",
+            log["entity_type"], log["entity_id"], str(log["metadata_json"] or ""),
         ])
     buffer.seek(0)
 
