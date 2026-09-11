@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_theme.dart';
+import '../../core/api_client.dart';
 import 'auth_controller.dart';
 
 enum _LoginMode { milkman, customer }
@@ -18,8 +19,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _phoneOrPasswordController = TextEditingController();
   final _customerPhoneController = TextEditingController();
 
+  // Starts true so we can silently check for an existing session (works
+  // offline too, since it's just reading local storage) before showing
+  // the login form at all - this is what makes "already logged in"
+  // survive an app restart without a network round-trip.
+  bool _checkingSession = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkExistingSession();
+  }
+
+  Future<void> _checkExistingSession() async {
+    final token = await ApiClient.instance.getToken();
+    final role = await ApiClient.instance.getRole();
+
+    if (!mounted) return;
+
+    if (token != null && role != null) {
+      final route = switch (role) {
+        'MILKMAN' => '/milkman',
+        'CUSTOMER' => '/customer',
+        'ADMIN' => '/admin',
+        _ => null,
+      };
+      if (route != null) {
+        Navigator.of(context).pushReplacementNamed(route);
+        return;
+      }
+    }
+
+    setState(() => _checkingSession = false);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_checkingSession) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     ref.listen(authControllerProvider, (previous, next) {
       if (next.status == AuthStatus.loggedIn) {
         if (next.role == 'MILKMAN') {
