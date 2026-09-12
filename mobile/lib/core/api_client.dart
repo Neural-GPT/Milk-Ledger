@@ -38,7 +38,7 @@ class ApiClient {
   // Using `adb reverse tcp:8000 tcp:8000` over USB, the phone's
   // localhost:8000 forwards straight to the PC's backend. Once deployed
   // to Render, point this at that HTTPS URL instead.
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'https://milk-ledger-1gxx.onrender.com';
 
   late final Dio _dio;
   final _storage = const FlutterSecureStorage();
