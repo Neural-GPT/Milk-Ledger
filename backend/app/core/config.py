@@ -14,10 +14,6 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 1440
 
-    textbee_api_key: str = ""
-    textbee_device_id: str = ""
-    default_country_code: str = "+91"
-
     env: str = "development"
 
     class Config:

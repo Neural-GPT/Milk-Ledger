@@ -24,7 +24,7 @@ class CustomersTabState extends State<CustomersTab> {
   Future<void> reload() async {
     setState(() => _loading = true);
     try {
-      final res = await ApiClient.instance.dio.get('/customers');
+      final res = await ApiClient.instance.cachedGet('/customers');
       setState(() => _customers = res.data);
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -67,11 +67,6 @@ class CustomersTabState extends State<CustomersTab> {
             decoration: const InputDecoration(hintText: 'Search by name or phone', prefixIcon: Icon(Icons.search)),
             onChanged: (v) => setState(() => _query = v),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Need to reset a customer\'s device lock? That\'s handled by the admin now.',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-          ),
           const SizedBox(height: 16),
           if (_loading)
             const Padding(padding: EdgeInsets.only(top: 40), child: Center(child: CircularProgressIndicator()))
@@ -81,13 +76,21 @@ class CustomersTabState extends State<CustomersTab> {
               child: Center(child: Text('No customers found.', style: TextStyle(color: AppTheme.textSecondary))),
             )
           else
-            ...filtered.map((c) => Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    title: Text(c['name'] ?? ''),
-                    subtitle: Text(c['phone_number'] ?? ''),
+            ...filtered.map((c) {
+              final address = (c['address'] as String?)?.trim();
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  title: Text(c['name'] ?? ''),
+                  subtitle: Text(
+                    address != null && address.isNotEmpty
+                        ? '${c['phone_number']}\n$address'
+                        : c['phone_number'] ?? '',
                   ),
-                )),
+                  isThreeLine: address != null && address.isNotEmpty,
+                ),
+              );
+            }),
         ],
       ),
     );

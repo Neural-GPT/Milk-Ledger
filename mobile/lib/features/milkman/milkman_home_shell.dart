@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
-import '../../core/logout_fab.dart';
 import 'dashboard_tab.dart';
 import 'customers_tab.dart';
 import 'analysis_tab.dart';
@@ -30,8 +29,6 @@ class _MilkmanHomeShellState extends State<MilkmanHomeShell> {
 
     return Scaffold(
       body: SafeArea(child: pages[_index]),
-      floatingActionButton: const LogoutFab(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
         onTap: (i) {

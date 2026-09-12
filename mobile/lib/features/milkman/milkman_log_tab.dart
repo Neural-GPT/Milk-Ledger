@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../auth/auth_controller.dart';
 
 const Map<String, String> _actionLabels = {
   'MILK_ENTRY_CREATED': 'Entry added',
@@ -11,14 +13,14 @@ const Map<String, String> _actionLabels = {
   'CUSTOMER_CREATED': 'Customer added',
 };
 
-class MilkmanLogTab extends StatefulWidget {
+class MilkmanLogTab extends ConsumerStatefulWidget {
   const MilkmanLogTab({super.key});
 
   @override
-  State<MilkmanLogTab> createState() => MilkmanLogTabState();
+  ConsumerState<MilkmanLogTab> createState() => MilkmanLogTabState();
 }
 
-class MilkmanLogTabState extends State<MilkmanLogTab> {
+class MilkmanLogTabState extends ConsumerState<MilkmanLogTab> {
   List<dynamic> _logs = [];
   bool _loading = true;
 
@@ -132,7 +134,19 @@ class MilkmanLogTabState extends State<MilkmanLogTab> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('My Log', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.logout, color: AppTheme.textSecondary),
+                onPressed: () {
+                  ref.read(authControllerProvider.notifier).logout();
+                  Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                },
+              ),
+              const SizedBox(width: 4),
+              const Text('My Log', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            ],
+          ),
           const SizedBox(height: 4),
           const Text('Today\'s entries and edits', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
           const SizedBox(height: 16),

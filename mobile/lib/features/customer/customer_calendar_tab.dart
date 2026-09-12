@@ -30,7 +30,7 @@ class CustomerCalendarTabState extends State<CustomerCalendarTab> {
 
   Future<void> reload() async {
     setState(() => _loading = true);
-    final res = await ApiClient.instance.dio.get('/milk-entries/me');
+    final res = await ApiClient.instance.cachedGet('/milk-entries/me');
     setState(() {
       _entries = (res.data as List).map((e) => MilkEntry.fromJson(e)).toList();
       _loading = false;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
-import 'customer_calendar_popup.dart';
+import '../../shared/widgets/customer_calendar_popup.dart';
 
 const _monthNames = [
   '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -27,7 +27,7 @@ class AnalysisTabState extends State<AnalysisTab> {
   Future<void> reload() async {
     setState(() => _loading = true);
     try {
-      final res = await ApiClient.instance.dio.get('/dashboard/analysis');
+      final res = await ApiClient.instance.cachedGet('/dashboard/analysis');
       setState(() => _data = res.data);
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -102,7 +102,11 @@ class AnalysisTabState extends State<AnalysisTab> {
                   ),
                   title: Text(c['name'] ?? ''),
                   trailing: Text('${c['total_litres']} L', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  onTap: () => showCustomerCalendarPopup(context, c['id'], c['name'] ?? ''),
+                  onTap: () => showCustomerCalendarPopup(
+                    context,
+                    entriesEndpoint: '/milk-entries/customer/${c['id']}',
+                    customerName: c['name'] ?? '',
+                  ),
                 ),
               );
             }),

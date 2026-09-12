@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
-import '../../core/logout_fab.dart';
 import 'customer_home_tab.dart';
 import 'customer_calendar_tab.dart';
 import 'customer_log_tab.dart';
@@ -76,8 +75,6 @@ class _CustomerHomeShellState extends State<CustomerHomeShell> with WidgetsBindi
 
     return Scaffold(
       body: SafeArea(child: pages[_index]),
-      floatingActionButton: const LogoutFab(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
         onTap: (i) {

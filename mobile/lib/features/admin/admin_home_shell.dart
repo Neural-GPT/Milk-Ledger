@@ -4,6 +4,7 @@ import '../../core/logout_fab.dart';
 import 'admin_milkmen_tab.dart';
 import 'admin_customers_tab.dart';
 import 'admin_logs_tab.dart';
+import 'admin_insights_tab.dart';
 
 class AdminHomeShell extends StatefulWidget {
   const AdminHomeShell({super.key});
@@ -17,6 +18,7 @@ class _AdminHomeShellState extends State<AdminHomeShell> {
   final _milkmenKey = GlobalKey<AdminMilkmenTabState>();
   final _customersKey = GlobalKey<AdminCustomersTabState>();
   final _logsKey = GlobalKey<AdminLogsTabState>();
+  final _insightsKey = GlobalKey<AdminInsightsTabState>();
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +26,7 @@ class _AdminHomeShellState extends State<AdminHomeShell> {
       AdminMilkmenTab(key: _milkmenKey),
       AdminCustomersTab(key: _customersKey),
       AdminLogsTab(key: _logsKey),
+      AdminInsightsTab(key: _insightsKey),
     ];
 
     return Scaffold(
@@ -38,6 +41,7 @@ class _AdminHomeShellState extends State<AdminHomeShell> {
           if (i == 0) _milkmenKey.currentState?.reload();
           if (i == 1) _customersKey.currentState?.reload();
           if (i == 2) _logsKey.currentState?.reload();
+          if (i == 3) _insightsKey.currentState?.reload();
         },
         backgroundColor: AppTheme.surface,
         selectedItemColor: AppTheme.accent,
@@ -47,6 +51,7 @@ class _AdminHomeShellState extends State<AdminHomeShell> {
           BottomNavigationBarItem(icon: Icon(Icons.local_shipping_outlined), label: 'Milkmen'),
           BottomNavigationBarItem(icon: Icon(Icons.people_outline), label: 'Customers'),
           BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Logs'),
+          BottomNavigationBarItem(icon: Icon(Icons.insights_outlined), label: 'Insights'),
         ],
       ),
     );

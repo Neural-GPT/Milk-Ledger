@@ -18,39 +18,44 @@ Future<void> showFeedbackDialog(BuildContext context, {String? introText}) async
       builder: (context, setDialogState) => AlertDialog(
         backgroundColor: AppTheme.surface,
         title: const Text('Rate your experience'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (introText != null) ...[
-              Text(introText, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-              const SizedBox(height: 12),
-            ],
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(5, (i) {
-                final starIndex = i + 1;
-                return IconButton(
-                  icon: Icon(
-                    starIndex <= rating ? Icons.star : Icons.star_border,
-                    color: AppTheme.accent,
-                    size: 32,
-                  ),
-                  onPressed: () => setDialogState(() => rating = starIndex),
-                );
-              }),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: commentController,
-              maxLines: 3,
-              decoration: const InputDecoration(hintText: 'Anything you want to tell us? (optional)'),
-            ),
-            if (error != null) ...[
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (introText != null) ...[
+                Text(introText, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                const SizedBox(height: 12),
+              ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) {
+                  final starIndex = i + 1;
+                  return GestureDetector(
+                    onTap: () => setDialogState(() => rating = starIndex),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Icon(
+                        starIndex <= rating ? Icons.star : Icons.star_border,
+                        color: AppTheme.accent,
+                        size: 30,
+                      ),
+                    ),
+                  );
+                }),
+              ),
               const SizedBox(height: 8),
-              Text(error!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+              TextField(
+                controller: commentController,
+                maxLines: 3,
+                decoration: const InputDecoration(hintText: 'Anything you want to tell us? (optional)'),
+              ),
+              if (error != null) ...[
+                const SizedBox(height: 8),
+                Text(error!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+              ],
             ],
-          ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Not now')),

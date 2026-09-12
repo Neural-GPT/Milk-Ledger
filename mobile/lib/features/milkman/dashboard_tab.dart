@@ -130,25 +130,27 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: AppTheme.surface,
           title: Text(_currentPrice == null ? 'Set Milk Rate' : 'Change Milk Rate'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: controller,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(hintText: 'Rate per litre (\u20b9)'),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Once set, the rate can only be changed once per month.',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-              ),
-              if (dialogError != null) ...[
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: controller,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(hintText: 'Rate per litre (\u20b9)'),
+                ),
                 const SizedBox(height: 8),
-                Text(dialogError!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                const Text(
+                  'Once set, the rate can only be changed once per month.',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
+                if (dialogError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(dialogError!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                ],
               ],
-            ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),

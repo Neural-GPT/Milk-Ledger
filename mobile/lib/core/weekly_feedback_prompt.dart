@@ -14,11 +14,17 @@ class WeeklyFeedbackPrompt {
     final lastShownStr = await _storage.read(key: _key);
     final now = DateTime.now();
 
-    if (lastShownStr != null) {
-      final lastShown = DateTime.tryParse(lastShownStr);
-      if (lastShown != null && now.difference(lastShown).inDays < 7) {
-        return;
-      }
+    if (lastShownStr == null) {
+      // First time ever - just set the baseline, don't show immediately.
+      // The prompt starts a week from whenever the person first logged in,
+      // not the instant they open the app for the first time.
+      await _storage.write(key: _key, value: now.toIso8601String());
+      return;
+    }
+
+    final lastShown = DateTime.tryParse(lastShownStr);
+    if (lastShown != null && now.difference(lastShown).inDays < 7) {
+      return;
     }
 
     await _storage.write(key: _key, value: now.toIso8601String());

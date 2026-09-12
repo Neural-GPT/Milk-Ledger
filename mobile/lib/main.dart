@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/app_theme.dart';
+import 'core/connectivity_banner.dart';
 import 'features/auth/login_screen.dart';
 import 'features/milkman/milkman_home_shell.dart';
 import 'features/customer/customer_home_shell.dart';
@@ -26,6 +27,7 @@ class MilkApp extends StatelessWidget {
         '/customer': (_) => const CustomerHomeShell(),
         '/admin': (_) => const AdminHomeShell(),
       },
+      builder: (context, child) => ConnectivityBanner(child: child ?? const SizedBox.shrink()),
     );
   }
 }

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import require_role
-from app.models.models import User, Milkman, Customer, AuditLog, RoleEnum
+from app.models.models import User, Milkman, Customer, AuditLog, MilkEntry, Feedback, RoleEnum
 
 from app.services.audit import enrich_audit_logs
 
@@ -229,3 +229,75 @@ async def admin_wipe_audit_logs(
     result = await db.execute(stmt)
     await db.commit()
     return {"message": f"Deleted {result.rowcount} log entries."}
+
+
+class MilkEntryOut(BaseModel):
+    id: str
+    delivery_date: date
+    quantity_litres: float
+    price_per_litre: float
+    total_amount: float
+
+    class Config:
+        from_attributes = True
+
+
+@router.get(
+    "/customers/{customer_id}/milk-entries",
+    response_model=list[MilkEntryOut],
+    dependencies=[Depends(require_role(RoleEnum.ADMIN))],
+)
+async def admin_customer_milk_entries(customer_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Lets the admin see a customer's delivery history the same way a
+    milkman can (used for the calendar popup on the admin's Customers page).
+    """
+    customer = await db.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(404, "Customer not found")
+
+    result = await db.execute(
+        select(MilkEntry)
+        .where(MilkEntry.customer_id == customer_id, MilkEntry.is_deleted.is_(False))
+        .order_by(MilkEntry.delivery_date.desc())
+    )
+    return result.scalars().all()
+
+
+@router.get("/analysis", dependencies=[Depends(require_role(RoleEnum.ADMIN))])
+async def admin_analysis(db: AsyncSession = Depends(get_db)):
+    """System-wide usage stats, across every milkman - for the admin's Insights tab."""
+    from sqlalchemy import func
+
+    today = date.today()
+    month_start = today.replace(day=1)
+
+    milkman_count = (await db.execute(select(func.count(Milkman.id)))).scalar_one()
+    customer_count = (await db.execute(select(func.count(Customer.id)))).scalar_one()
+
+    result = await db.execute(
+        select(
+            func.count(MilkEntry.id),
+            func.coalesce(func.sum(MilkEntry.quantity_litres), 0),
+            func.coalesce(func.sum(MilkEntry.total_amount), 0),
+        ).where(
+            MilkEntry.is_deleted.is_(False),
+            MilkEntry.delivery_date >= month_start,
+            MilkEntry.delivery_date <= today,
+        )
+    )
+    entries_this_month, litres_this_month, collection_this_month = result.one()
+
+    avg_rating_result = await db.execute(select(func.avg(Feedback.rating)))
+    avg_rating = avg_rating_result.scalar_one()
+    feedback_count = (await db.execute(select(func.count(Feedback.id)))).scalar_one()
+
+    return {
+        "total_milkmen": milkman_count,
+        "total_customers": customer_count,
+        "entries_this_month": entries_this_month,
+        "litres_this_month": float(litres_this_month),
+        "collection_this_month": float(collection_this_month),
+        "average_rating": round(float(avg_rating), 2) if avg_rating else None,
+        "feedback_count": feedback_count,
+    }

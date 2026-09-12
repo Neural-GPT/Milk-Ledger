@@ -103,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   padding: const EdgeInsets.all(4),
                   child: Row(
                     children: [
-                      Expanded(child: _modeTab('Milkman / Admin', _LoginMode.milkman)),
+                      Expanded(child: _modeTab('Milkman', _LoginMode.milkman)),
                       Expanded(child: _modeTab('Customer', _LoginMode.customer)),
                     ],
                   ),
@@ -121,11 +121,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     keyboardType: TextInputType.number,
                     obscureText: true,
                     decoration: const InputDecoration(hintText: 'Phone number', prefixIcon: Icon(Icons.phone_outlined)),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Milkman: your registered name + phone number. Admin: your username + numeric password.',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                   ),
                 ] else ...[
                   TextField(

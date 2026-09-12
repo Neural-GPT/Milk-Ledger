@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/app_theme.dart';
+import '../../shared/widgets/customer_calendar_popup.dart';
 
 class AdminCustomersTab extends StatefulWidget {
   const AdminCustomersTab({super.key});
@@ -82,6 +83,8 @@ class AdminCustomersTabState extends State<AdminCustomersTab> {
         padding: const EdgeInsets.all(16),
         children: [
           const Text('Customers', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          const Text('Tap a customer to see their milk calendar', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
           const SizedBox(height: 12),
           TextField(
             decoration: const InputDecoration(hintText: 'Search by name, phone, or milkman', prefixIcon: Icon(Icons.search)),
@@ -121,6 +124,11 @@ class AdminCustomersTabState extends State<AdminCustomersTab> {
                     children: customers.map<Widget>((c) => ListTile(
                           title: Text(c['name'] ?? ''),
                           subtitle: Text(c['phone_number'] ?? ''),
+                          onTap: () => showCustomerCalendarPopup(
+                            context,
+                            entriesEndpoint: '/admin/customers/${c['id']}/milk-entries',
+                            customerName: c['name'] ?? '',
+                          ),
                           trailing: c['device_locked'] == true
                               ? TextButton(
                                   onPressed: () => _resetDevice(c['id'], c['name'] ?? 'This customer'),
